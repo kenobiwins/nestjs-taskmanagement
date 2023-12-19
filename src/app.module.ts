@@ -2,19 +2,27 @@ import { Module } from '@nestjs/common';
 import { TasksModule } from './tasks/tasks.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
     TasksModule,
-    TypeOrmModule.forRoot({
-      type: process.env.DB_TYPE as 'postgres',
-      host: process.env.DB_HOST,
-      port: parseInt(process.env.DB_PORT, 10),
-      username: process.env.DB_USERNAME,
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_DATABASE,
-      autoLoadEntities: process.env.DB_AUTOLOAD_ENTITIES === 'true',
-      synchronize: process.env.DB_SYNCHRONIZE === 'true',
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        type: 'postgres',
+        host: configService.get('DB_HOST'),
+        port: Number(configService.get<number>('DB_PORT')),
+        username: configService.get('DB_USERNAME'),
+        password: configService.get('DB_PASSWORD'),
+        database: configService.get('DB_DATABASE'),
+        synchronize: false,
+        entities: [__dirname + '/../**/*.entity.js'],
+        // autoLoadEntities: process.env.DB_AUTOLOAD_ENTITIES === 'true',
+        // synchronize: process.env.DB_SYNCHRONIZE === 'true',
+      }),
+      inject: [ConfigService],
     }),
     AuthModule,
   ],
